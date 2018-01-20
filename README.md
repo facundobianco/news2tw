@@ -10,7 +10,19 @@ TODO: Create a post in medium to explain it.
 
 * Use Sqlite3 database for storing data.
 * Shrink message length without trimming the last word.
+* Prevention for running one instance at same time.
 * TODO: Reddit: Use the link insted of the URL to subreddit post.
+
+### Requirements
+
+Python >= 2.7.13
+
+```
+argparse==1.1
+feedparser==5.1.3
+re==2.2.1
+tweepy==3.5.0
+```
 
 ### How to use
 
@@ -18,10 +30,16 @@ TODO: Create a post in medium to explain it.
 
 First, [create your Twitter application](https://apps.twitter.com/app/new) and generate the keys: *Consumer key* and *Consumer secret*. Do not forget to enable read and write access in the *Permissions* tab.
 
-Then, run
+Get the required tokens for posting on Twitter
 
 ```
 news2py -a <your_feed_alias>
+```
+
+Finally, run a cron job every minute
+
+```
+1 * * * * news2py <your_feed_alias>
 ```
 
 #### List feeds 
