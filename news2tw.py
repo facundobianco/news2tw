@@ -195,7 +195,7 @@ def main():
             do the magic
             """
             if lstf is None:
-                print name, api, feed.entries[0].title, feed.entries[0].link, db, cursor
+                post(name, api, feed.entries[0].title, feed.entries[0].link, db, cursor)
             else:
                 for i in range(len(feed.entries)):
                     link = feed.entries[i].link
