@@ -58,17 +58,12 @@ def init(name, db, cursor):
         db.close()
         print 'Feed was successfully added to database!' 
 
-def list(db, cursor):
-    cursor.execute('''SELECT id FROM acct LIMIT 1''')
-    if cursor.fetchone() is None:
-        print 'Table is empty'
-    else:
-        cursor.execute('''SELECT * FROM acct ORDER BY id ASC''')
-        for row in cursor:
-            print('{0} (@{1}): {2}'.format(row[1], row[3], row[2]))
-    db.close()
+def list(cursor):
+    cursor.execute('''SELECT * FROM acct ORDER BY id ASC''')
+    for row in cursor:
+        print('{0} (@{1}): {2}'.format(row[1], row[3], row[2]))
 
-def stus(name, db, cursor):
+def stus(name, cursor):
     if name is None:
         cursor.execute('''SELECT * FROM feed ORDER BY id ASC''')
         for row in cursor:
@@ -78,7 +73,6 @@ def stus(name, db, cursor):
         feed = cursor.fetchone()
         if feed:
             print('[{0}] IN USE: {1}, LAST FEED: {2}'.format(row[1], row[3], row[2]))
-    db.close()
 
 def auth(name, db, keys):
     """
@@ -158,12 +152,14 @@ def main():
 
     # List
     if args.list:
-        list(db, cursor)
+        list(cursor)
+        db.close()
         quit()
 
     # Status
     if args.stus:
-        stus(name, db, cursor)
+        stus(name, cursor)
+        db.close()
         quit()
 
     # Download and post
