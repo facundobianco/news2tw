@@ -80,26 +80,19 @@ def stus(name, db, cursor):
             print('[{0}] IN USE: {1}, LAST FEED: {2}'.format(row[1], row[3], row[2]))
     db.close()
 
-def auth(name, db, cursor):
+def auth(name, db, keys):
     """
     auth
     """
-    cursor.execute('''SELECT consumer_key, consumer_secret, token_key, token_secret FROM acct WHERE name=?''', (name,))
-    keys = cursor.fetchone()
-    if keys is None:
-        print 'Name is invalid'
+    auth = tweepy.OAuthHandler(keys[0], keys[1])
+    auth.set_access_token(keys[2], keys[3])
+    try:
+        api = tweepy.API(auth)
+    except:
         db.close()
         quit(1)
     else:
-        auth = tweepy.OAuthHandler(keys[0], keys[1])
-        auth.set_access_token(keys[2], keys[3])
-        try:
-            api = tweepy.API(auth)
-        except:
-            db.close()
-            quit(1)
-        else:
-            return api
+        return api
 
 def post(name, api, title, link, db, cursor):
     """
@@ -121,13 +114,11 @@ def post(name, api, title, link, db, cursor):
         cursor.execute('''UPDATE feed SET url=? WHERE name=?''', (link, name))
         db.commit()
 
-def down(name, db, cursor):
+def down(name, db, url):
     """
     feedparser 
     """
-    cursor.execute('''SELECT url FROM acct WHERE name=?''', (name,))
-    furl = cursor.fetchone()
-    feed = feedparser.parse(furl[0])
+    feed = feedparser.parse(url)
     if feed.status != 200 or not feed.entries:
         db.close()
         quit(1)
@@ -138,8 +129,6 @@ def last(name, cursor):
     """
     last feed
     """
-    cursor.execute('''SELECT url FROM feed WHERE name=?''', (name,))
-    last = cursor.fetchone()
     return last[0]
 
 def main():
@@ -188,13 +177,19 @@ def main():
         if status[0] == 'NO':
             cursor.execute('''UPDATE feed SET inuse=? WHERE name=?''', ('YES', name))
             db.commit()
-            api = auth(name, db, cursor)
-            lstf = last(name, cursor)
-            feed = down(name, db, cursor)
-            """
-            do the magic
-            """
-            if lstf is None:
+            # auth
+            cursor.execute('''SELECT consumer_key, consumer_secret, token_key, token_secret FROM acct WHERE name=?''', (name,))
+            keys = cursor.fetchone()
+            api = auth(name, db, keys)
+            # last feed
+            cursor.execute('''SELECT url FROM feed WHERE name=?''', (name,))
+            last = cursor.fetchone()
+            # down
+            cursor.execute('''SELECT url FROM acct WHERE name=?''', (name,))
+            url = cursor.fetchone()
+            feed = down(name, db, url[0])
+            # do the magic
+            if last[0] is None:
                 post(name, api, feed.entries[0].title, feed.entries[0].link, db, cursor)
             else:
                 for i in range(len(feed.entries)):
