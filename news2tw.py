@@ -242,6 +242,8 @@ def main():
             else:
                 if feed.url.find('reddit.com') > -1:
                     reddit = True
+                else:
+                    reddit = False
                 for i in range(len(feed.entries)):
                     logging.debug('  Feed entry #%d', i)
                     if reddit:
