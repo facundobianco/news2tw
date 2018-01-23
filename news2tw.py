@@ -107,6 +107,14 @@ def auth(name, db, keys):
     else:
         return api
 
+def clnk(link):
+    """
+    clean reddit url
+    """
+    start = '^.*<br /> <span><a href="'
+    end = '">\[link\].*$'
+    return re.search('%s(.*)%s' % (start, end), link).group(1)
+
 def post(name, api, title, link, db, cursor):
     """
     (if required) trim tweet
@@ -136,12 +144,6 @@ def down(name, url):
         return None
     else:
         return feed
-
-def last(name, cursor):
-    """
-    last feed
-    """
-    return last[0]
 
 def main():
     # Read arguments
@@ -233,14 +235,22 @@ def main():
                 quit()
             # do the magic
             if last[0] is None:
-                post(name, api, feed.entries[0].title, feed.entries[0].link, db, cursor)
+                if feed.url.find('reddit.com') > -1:
+                    link = clnk(feed.entries[0].description)
+                logging.debug('  Feed link is %s', link)
+                post(name, api, feed.entries[0].title, link, db, cursor)
             else:
+                if feed.url.find('reddit.com') > -1:
+                    reddit = True
                 for i in range(len(feed.entries)):
                     logging.debug('  Feed entry #%d', i)
-                    link = feed.entries[i].link
+                    if reddit:
+                        link = clnk(feed.entries[0].description)
+                    else:
+                        link = feed.entries[i].link
                     logging.debug('  Feed link is %s',link)
                     if link != last[0]:
-                        post(name, api, feed.entries[i].title, feed.entries[i].link, db, cursor)
+                        post(name, api, feed.entries[i].title, link, db, cursor)
                     else: 
                         logging.debug('  Feed link and last are same')
                         break

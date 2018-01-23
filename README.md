@@ -1,4 +1,4 @@
-# news2tw v0.8
+# news2tw v0.9
 
 ### Description
 
@@ -11,7 +11,7 @@ TODO: Create a post in medium to explain it.
 * Use Sqlite3 database for storing data.
 * Shrink message length without trimming the last word.
 * Prevention for running one instance at same time.
-* TODO: Reddit: Use the link insted of the URL to subreddit post.
+* Reddit: Use the link insted of the URL to subreddit post.
 
 ### Requirements
 
@@ -54,3 +54,4 @@ news2py -l
 They are unofficial accounts.
 
 [![Liveuamap Middle East](imgs/1516466132.png)](https://twitter.com/lummideastrss2)
+[![/r/worldnews](imgs/1516466872.png)](https://twitter.com/r__worldnews)
