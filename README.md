@@ -1,4 +1,4 @@
-# news2tw v0.7
+# news2tw v0.8
 
 ### Description
 
@@ -20,6 +20,7 @@ Python >= 2.7.13
 ```
 argparse==1.1
 feedparser==5.1.3
+logging==0.5.1.2
 re==2.2.1
 tweepy==3.5.0
 ```
