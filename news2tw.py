@@ -247,7 +247,7 @@ def main():
                 for i in range(len(feed.entries)):
                     logging.debug('  Feed entry #%d', i)
                     if reddit:
-                        link = clnk(feed.entries[0].description)
+                        link = clnk(feed.entries[i].description)
                     else:
                         link = feed.entries[i].link
                     logging.debug('  Feed link is %s',link)
