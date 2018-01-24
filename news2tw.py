@@ -237,6 +237,8 @@ def main():
             if last[0] is None:
                 if feed.url.find('reddit.com') > -1:
                     link = clnk(feed.entries[0].description)
+                else:
+                    link = feed.entries[0].link
                 logging.debug('  Feed link is %s', link)
                 post(name, api, feed.entries[0].title, link, db, cursor)
             else:
