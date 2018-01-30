@@ -329,7 +329,9 @@ def main():
                     j += 1
             if j > -1:
                 logging.debug('  Post the latest news.')
+                logging.debug('  Newest news are: %d', j)
                 for i in range(j,-1,-1):
+                    logging.debug('  (From oldest to newest) News numer #%d', i)
                     link = clnk(feed.entries[i].link, feed.entries[i].description)
                     try:
                         post(api, feed.entries[i].title, link, name)
