@@ -330,9 +330,9 @@ def main():
             if j > -1:
                 logging.debug('  Post the latest news.')
                 for i in range(j,-1,-1):
-                    link = clnk(feed.entries[j].link, feed.entries[j].description)
+                    link = clnk(feed.entries[i].link, feed.entries[i].description)
                     try:
-                        post(api, feed.entries[j].title, link, name)
+                        post(api, feed.entries[i].title, link, name)
                     except:
                         ppid(dnam, True)
                         quit(1)
