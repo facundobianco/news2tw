@@ -209,6 +209,7 @@ def save(conf, link, name):
     data[name]['last'] = link
     with open(conf, 'w') as stream:
         yaml.safe_dump(data, stream, default_flow_style=False)
+    logging.debug('  Updated last tweet in YAML.')
 
 def main():
     """
