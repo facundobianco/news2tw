@@ -323,12 +323,12 @@ def main():
             for i in range(len(feed.entries)):
                 link = clnk(feed.entries[i].link, feed.entries[i].description)
                 if link == last:
-                    logging.debug('  Last link and latest tweet are the same. Quit.')
+                    logging.debug('  Last link and latest tweet are the same.')
                     break
                 else:
                     j += 1
             if j > -1:
-                logging.debug('  Looking for latest news.')
+                logging.debug('  Post the latest news.')
                 for i in range(j,-1,-1):
                     link = clnk(feed.entries[j].link, feed.entries[j].description)
                     try:
