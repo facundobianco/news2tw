@@ -1,4 +1,4 @@
-# news2tw v0.9
+# news2tw v0.9.1
 
 ### Description
 
@@ -8,21 +8,32 @@ TODO: Create a post in medium to explain it.
 
 ### Features
 
-* Use Sqlite3 database for storing data.
+* Use YAML for storing data.
 * Shrink message length without trimming the last word.
 * Prevention for running one instance at same time.
 * Reddit: Use the link insted of the URL to subreddit post.
 
 ### Requirements
 
-Python >= 2.7.13
+news2tw requires Python >= 2.7.13.
+
+On Debian 9 you should install
 
 ```
-argparse==1.1
-feedparser==5.1.3
-logging==0.5.1.2
-re==2.2.1
-tweepy==3.5.0
+apt install -y python-feedparser \
+               python-tweepy \
+               python-yaml               
+```
+
+Also, if you want to run news2tw into a virtual enviroment you should install
+
+```
+pip install argparse==1.1 \
+            feedparser==5.1.3 \
+            logging==0.5.1.2 \
+            re==2.2.1 \
+            tweepy==3.5.0 \
+            yaml==3.12
 ```
 
 ### How to use
@@ -34,19 +45,25 @@ First, [create your Twitter application](https://apps.twitter.com/app/new) and g
 Get the required tokens for posting on Twitter
 
 ```
-news2py -a <your_feed_alias>
+news2tw -a <your_feed_alias>
 ```
 
 Finally, run a cron job every minute
 
 ```
-1 * * * * news2py <your_feed_alias>
+1 * * * * news2tw <your_feed_alias>
 ```
 
 #### List feeds 
 
 ```
-news2py -l
+news2tw -l
+```
+
+#### Remove last tweet from DB
+
+```
+news2tw --clean <your_feed_alias>
 ```
 
 ### Twitter accounts powered by news2tw 
@@ -54,4 +71,5 @@ news2py -l
 They are unofficial accounts.
 
 [![Liveuamap Middle East](imgs/1516466132.png)](https://twitter.com/lummideastrss2)
+
 [![/r/worldnews](imgs/1516466872.png)](https://twitter.com/r__worldnews)

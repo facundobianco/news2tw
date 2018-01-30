@@ -6,22 +6,65 @@
 import argparse
 import feedparser
 import logging
+import os
 import re
-import sqlite3
 import tweepy
+import yaml
 
-def ifnotexists(db, cursor):
+def rdir(ddir):
+    """
+    Create configuration directory and/or
+    return directory expanded
+    """
+    if not os.path.exists(ddir):
+        os.makedirs(ddir, 0700)
+        logging.debug('  Created %s (mode 0700)', ddir)
+    if os.stat(ddir).st_mode > 16832:
+        print os.stat(ddir)
+        logging.debug('  Correct %s permissions to 0700', ddir)
+    logging.debug('  Data directory is %s', ddir)
+    return ddir
+
+def rcfg(dnam):
+    """
+    Return the configuration YAML
+    """
+    conf = dnam + '/config.yml'
+    if not os.path.exists(conf):
+        os.mknod(conf)
+        logging.debug('  Created empty configuration file')
+    logging.debug('  Configuration file is %s', conf)
+    return conf
+
+def rdat(conf, name):
+    """
+    Return valid YAML data
+    """
+    with open(conf, 'r') as stream:
+        data = yaml.safe_load(stream)
     try:
-        cursor.execute('''SELECT id FROM acct LIMIT 1''')
-    except sqlite3.OperationalError:
-        cursor.executescript('''
-               CREATE TABLE IF NOT EXISTS acct(id INTEGER PRIMARY KEY, name TEXT unique, url TEXT, user TEXT, consumer_key TEXT, consumer_secret TEXT, token_key TEXT, token_secret TEXT);
-               CREATE TABLE IF NOT EXISTS feed(id INTEGER PRIMARY KEY, name TEXT unique, url TEXT, inuse TEXT);
-               ''')
-        db.commit()
-        print 'Created tables\n'
+        vals = data[name]
+    except KeyError:
+        print('Feed item %s doesn\'t exist. Quit.' % name)
+        return False
+    else:
+        return vals
 
-def init(name, db, cursor):
+def list(conf):
+    """
+    List feed and related info
+    (for searching, use `grep -A3 <value>`)
+    """
+    with open(conf, 'r') as stream:
+        data = yaml.safe_load(stream)
+    for i in data:
+        print('[%s]' % i)
+        print('Twitter: %s' % data[i]['user'])
+        print('RSS: %s' % data[i]['url'])
+        print('Last tweet: %s' % data[i]['last'])
+        print('')
+
+def tkns():
     """
     Get access tokens
     """
@@ -33,238 +76,275 @@ def init(name, db, cursor):
         print 'Open the URL in your browser:\n\n\t' + auth.get_authorization_url() + '\n'
     except tweepy.TweepError:
         print 'Error: Failed to get request token.'
-        db.close()
         quit(1)
     pin = raw_input('Verification pin number from twitter.com: ').strip()
     try:
         auth.get_access_token(verifier=pin)
     except tweepy.TweepError:
         print 'Error: Failed to get access token.'
-        db.close()
         quit(1)
     auth.set_access_token(auth.access_token, auth.access_token_secret)
     api = tweepy.API(auth)
     user = api.me()
+    logging.debug('  Requested keys: OK')
+    return user.screen_name, url, consumer_key, consumer_secret, auth.access_token, auth.access_token_secret
+
+def newf(conf, name, keys):
     """
-    Save it
+    Save new feed configuration and its keys
+    keys = screen_name, feed's url, consumer_key, consumer_secret, token_key, token_secret
     """
-    try:
-        cursor.execute('''INSERT INTO acct(name, url, user, consumer_key, consumer_secret, token_key, token_secret) VALUES (?,?,?,?,?,?,?)''', (name, url, user.screen_name, consumer_key, consumer_secret, auth.access_token, auth.access_token_secret))
-    except sqlite3.IntegrityError:
-        print 'Duplicated feed name'
+    data = {name:{'user':keys[0], 'url':keys[1], 'consumer_key':keys[2], 'consumer_secret':keys[3], 'token_key':keys[4], 'token_secret':keys[5], 'last':None, 'etag':None}}
+    with open(conf, 'a') as stream:
+        yaml.safe_dump(data, stream, default_flow_style=False)
+    logging.debug('  Saved data for', name)
+
+def ppid(dnam, dlte):
+    """
+    Manage news2tw's flow
+    ppid(ddir, <True|False>)
+    """
+    pidn = dnam + '/news2tw.pid'
+    logging.debug('  PID file is %s', pidn)
+    logging.debug('  PID file delete: %s', dlte)
+    pidf = os.path.exists(pidn)
+    if not dlte:
+        if not pidf:
+            gpid = str(os.getpid())
+            with open(pidn, 'w') as pid_file:
+                pid_file.write(gpid + '\n')
+            logging.debug('  PID file has ID %s', gpid)
+            return True
+        else:
+            logging.debug('  PID file %s exists', pidn)
+            return False
     else:
-        cursor.execute('''INSERT INTO feed(name, inuse) VALUES(?,?)''', (name, 'NO'))
-        db.commit()
-    finally:
-        db.close()
-        print 'Feed was successfully added to database!' 
+        os.remove(pidn)
+        logging.debug('  Removed PID file %s. Quit.', pidn)
+        quit()
 
-def list(cursor):
-    cursor.execute('''SELECT * FROM acct ORDER BY id ASC''')
-    for row in cursor:
-        print('{0} (@{1}): {2}'.format(row[1], row[3], row[2]))
-
-def stus(name, cursor):
-    if name is None:
-        cursor.execute('''SELECT * FROM feed ORDER BY id ASC''')
-        for row in cursor:
-            print('[{0}]\nIn use: {1}\nLast Feed: {2}\n'.format(row[1], row[3], row[2]))
+def clan(conf, name):
+    """
+    Clean up all feeds' last link
+    if feed name isn't provided
+    """
+    with open(conf, 'r') as stream:
+        data = yaml.safe_load(stream)
+    if name:
+        data[name]['last'] = None
     else:
-        cursor.execute('''SELECT * FROM feed WHERE name=?''', (name,))
-        feed = cursor.fetchone()
-        if feed:
-            print('[{0}] IN USE: {1}, LAST FEED: {2}'.format(row[1], row[3], row[2]))
+        ansr = ""
+        while ansr not in ['y', 'n']:
+            ansr = raw_input('Are you sure to clean up all feeds? [y/N] ').lower() or 'n'
+        if ansr == 'y':
+            for i in data:
+                logging.debug('  Cleaning last feed for %s', i)
+                data[i]['last'] = None
+    with open(conf, 'w') as stream:
+        yaml.safe_dump(data, stream, default_flow_style=False)
 
-def clan(name, cursor):
+def auth(data):
     """
-    clean up one feed
+    Authenticate with stored tokens
     """
-    cursor.execute('''UPDATE feed SET url=? WHERE name=?''', (None, name))
-    cursor.execute('''UPDATE feed SET inuse="NO" WHERE name=?''', (name,))
+    auth = tweepy.OAuthHandler(data['consumer_key'], data['consumer_secret'])
+    auth.set_access_token(data['token_key'], data['token_secret'])
+    logging.debug('  Loaded authorization keys')
+    api = tweepy.API(auth)
+    logging.debug('  Authentication: OK')
+    return api
 
-def call(cursor):
+def down(url):
     """
-    clean up all feeds
+    Get feeds
     """
-    answer = ""
-    while answer not in ["y", "n"]:
-        answer = raw_input("Are you sure to clean up all feeds? [y/N] ").lower() or "n"
-    if answer == "y":
-        cursor.execute('''UPDATE feed SET url=?''', (None,))
-        cursor.execute('''UPDATE feed SET inuse="NO" WHERE inuse="YES"''')
-
-def auth(name, db, keys):
-    """
-    auth
-    """
-    auth = tweepy.OAuthHandler(keys[0], keys[1])
-    auth.set_access_token(keys[2], keys[3])
-    try:
-        api = tweepy.API(auth)
-    except:
-        db.close()
-        quit(1)
-    else:
-        return api
-
-def clnk(link):
-    """
-    clean reddit url
-    """
-    start = '^.*<br /> <span><a href="'
-    end = '">\[link\].*$'
-    return re.search('%s(.*)%s' % (start, end), link).group(1)
-
-def post(name, api, title, link, db, cursor):
-    """
-    (if required) trim tweet
-    """
-    if len(title) > 257:
-        tweet = re.sub(' [^ ]*$', '... ', title[0:250]) + link
-    else:
-        tweet = title + ' ' + link
-    """
-    post it
-    """
-    try:
-        api.update_status(status=tweet)
-    except tweepy.TweepError:
-        db.close()
-        quit(1)
-    else:
-        cursor.execute('''UPDATE feed SET url=? WHERE name=?''', (link, name))
-        db.commit()
-
-def down(name, url):
-    """
-    feedparser 
-    """
+    logging.debug('  Downloading feed for %s', url)
     feed = feedparser.parse(url)
     if feed.status != 200 or not feed.entries:
-        return None
+        logging.debug('  Feed status: %s', feed.status)
+        logging.debug('  Feed entries: %s', feed.entries)
+        print('Cannot download feed. Quit.')
+        return False
     else:
+        logging.debug('  Feed downloaded')
         return feed
 
+def clnk(link, desc):
+    """
+    Clean Reddit URL to news or
+    return the link
+    """
+    if link.find('reddit.com') > -1:
+        start = '^.*<br /> <span><a href="'
+        end = '">\[link\].*$'
+        link = re.search('%s(.*)%s' % (start, end), desc).group(1)
+    logging.debug('  Feed link is %s', link)
+    return link
+
+def post(api, title, link, name):
+    """
+    (If required) Trim tweet and/or
+    post it
+    """
+    if len(title) > 257:
+        tweet = re.sub(' [^ ]*$', '...', title[0:250]) + ' ' + link
+        logging.debug('  Trimmed tweet.')
+    else:
+        tweet = title + ' ' + link
+    try:
+        logging.debug('  Tweet will be: %s', tweet)
+        api.update_status(status=tweet)
+    except tweepy.TweepError as e:
+        logging.debug('  Cannot post tweet %s.' % link)
+        logging.debug('  ERR %d: %s. Quit.', e.args[0][0]['code'], e.args[0][0]['message'])
+        raise
+    else:
+        pass
+
+def save(conf, link, name):
+    """
+    Save the last post
+    """
+    with open(conf, 'r') as stream:
+        data = yaml.safe_load(stream)
+    data[name]['last'] = link
+    with open(conf, 'w') as stream:
+        yaml.safe_dump(data, stream, default_flow_style=False)
+    logging.debug('  Updated last tweet in YAML.')
+
 def main():
+    """
+    core
+    """
     # Read arguments
     argument = argparse.ArgumentParser(
             prog = 'news2tw',
             description = 'Post your feeds on Twitter',
             epilog = 'For lastest version, visit https://github.com/vando/news2tw')
-    argument.add_argument('-a', '--add',     dest = 'init', action = 'store_true', help = 'Add a new feed item')
-    argument.add_argument('-c', '--clean',   dest = 'clan', action = 'store_true', help = 'Clean up one feed')
-    argument.add_argument('--clean-all',     dest = 'call', action = 'store_true', help = 'Clean up all feeds')
-    argument.add_argument('-l', '--list',    dest = 'list', action = 'store_true', help = 'List feeds')
-    argument.add_argument('-s', '--status',  dest = 'stus', action = 'store_true', help = 'Show status and last feed')
-    argument.add_argument('-v', '--verbose', dest = 'verb', action = 'store_true', help = 'Verbose (debug) logging')
+    argument.add_argument('-d', '--dest-dir', dest = 'ddir', default = '~/.news2tw', help = 'Data directory (default: ${HOME}/.news2tw)')
+    argument.add_argument('-a', '--add',      dest = 'init', action = 'store_true',  help = 'Add a new feed item')
+    argument.add_argument('-l', '--list',     dest = 'list', action = 'store_true',  help = 'List feeds')
+    argument.add_argument('-c', '-clean',     dest = 'clan', action = 'store_true',  help = 'Clean last tweet for feed')
+    argument.add_argument('--clean-all',      dest = 'call', action = 'store_true',  help = 'Clean last tweet for all feeds')
+    argument.add_argument('-v', '--verbose',  dest = 'verb', action = 'store_true',  help = 'Verbose (debug) logging')
     argument.add_argument('name', nargs='?', help = 'Feed name')
     args = argument.parse_args()
     name = args.name
-
-    # Start DB
-    db = sqlite3.connect('feed.sqlite3')
-    cursor = db.cursor()
-    ifnotexists(db, cursor)
-
+    ddir = args.ddir
+    # Logging options (set DEBUG)
     if args.verb:
         logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger(__name__)
-
-    # INIT
-    if args.init:
+    # Data directory
+    dnam = rdir(os.path.expanduser(ddir))
+    conf = rcfg(dnam)
+    size = os.stat(conf).st_size
+    logging.debug('  Configuration file size: %d', size)
+    #
+    # main options
+    # ------------
+    #
+    # Run INIT if config file is empty
+    # or get the INIT option
+    if size == 0 or args.init:
+        if size == 0:
+            print('Add your first feed!')
         if name is None:
             name = raw_input('Feed name: ').strip()
-        init(name, db, cursor)
-        quit()
-
-    # List
-    if args.list:
-        list(cursor)
-        db.close()
-        quit()
-
-    # Status
-    if args.stus:
-        stus(name, cursor)
-        db.close()
-        quit()
-
-    # Clean one feed
-    if args.clan:
-        clan(name, cursor)
-        db.commit()
-        db.close()
-        quit()
-
-    # Clean whole feeds
-    if args.call:
-        call(cursor)
-        db.commit()
-        db.close()
-        quit()
-
-    # Download and post
-    if args.name:
-        cursor.execute('''SELECT inuse FROM feed WHERE name=?''', (name,))
-        status = cursor.fetchone()
-        logging.debug('  is in use? %s', status[0])
-        if status is None:
-            print 'Feed not valid'
-            db.close()
-            quit(1)
-        if status[0] == 'NO':
-            cursor.execute('''UPDATE feed SET inuse=? WHERE name=?''', ('YES', name))
-            db.commit()
-            logging.debug('  SET inuse=YES')
-            # auth
-            cursor.execute('''SELECT consumer_key, consumer_secret, token_key, token_secret FROM acct WHERE name=?''', (name,))
-            keys = cursor.fetchone()
-            api = auth(name, db, keys)
-            logging.debug('  Loading keys and tokens')
-            # last feed
-            cursor.execute('''SELECT url FROM feed WHERE name=?''', (name,))
-            last = cursor.fetchone()
-            logging.debug('  Last feed is %s', last[0])
-            # down
-            cursor.execute('''SELECT url FROM acct WHERE name=?''', (name,))
-            url = cursor.fetchone()
-            feed = down(name, url[0])
-            logging.debug('  Feed status is %s', feed.status)
-            if feed is None:
-                db.close()
-                quit()
-            # do the magic
-            if last[0] is None:
-                if feed.url.find('reddit.com') > -1:
-                    link = clnk(feed.entries[0].description)
-                else:
-                    link = feed.entries[0].link
-                logging.debug('  Feed link is %s', link)
-                post(name, api, feed.entries[0].title, link, db, cursor)
-            else:
-                if feed.url.find('reddit.com') > -1:
-                    reddit = True
-                else:
-                    reddit = False
-                for i in range(len(feed.entries)):
-                    logging.debug('  Feed entry #%d', i)
-                    if reddit:
-                        link = clnk(feed.entries[i].description)
-                    else:
-                        link = feed.entries[i].link
-                    logging.debug('  Feed link is %s',link)
-                    if link != last[0]:
-                        post(name, api, feed.entries[i].title, link, db, cursor)
-                    else: 
-                        logging.debug('  Feed link and last are same')
-                        break
-            cursor.execute('''UPDATE feed SET inuse=? WHERE name=?''', ('NO', name))
-            logging.debug('  SET inuse=NO')
-            db.commit()
-            db.close()
-    else:
+        else:
+            print('Feed name is %s' % name)
+        keys = tkns()
+        newf(conf, name, keys)
+        quit(0)
+    #
+    # List feeds and status
+    if args.list and size > 0:
+        list(conf)
+        quit(0)
+    if args.list and size == 0:
+        print('Configuration file is empty. Quit.')
+        quit(1)
+    # 
+    # No option provided and
+    # configuration files > 0
+    if not name and not args.clan and not args.call:
+        logging.debug('  Not argument provided. Show help.')
         argument.print_help()
-        db.close()
+        quit()
+    #
+    # PID control
+    # (Required for the next functions)
+    flow = ppid(dnam, False)
+    # 
+    # Clean one feed
+    # or all feeds
+    if args.clan or args.call:
+        if args.clan and not name:
+            print('Feed name is required. Quit.')
+            ppid(dnam, True)
+            quit(1)
+        if size > 0:
+            if flow:
+                clan(conf, name)
+                ppid(dnam, True)
+                quit(0)
+            else:
+                print('Wait for the next time. Quit.')
+                quit(0)
+        else:
+            print('Configuration file is empty. Quit.')
+            ppid(dnam, True)
+            quit(1)
+    # 
+    # Get new entries and tweet it
+    if name and flow:
+        data = rdat(conf, name)
+        if not data:
+            ppid(dnam, True)
+        api = auth(data)
+        last = data['last']
+        logging.debug('  Last tweet was: %s', last)
+        feed = down(data['url'])
+        if not feed:
+            ppid(dnam, True)
+    # Do the magic
+        if last is None:
+            logging.debug('  Last tweet is None')
+            link = clnk(feed.entries[0].link, feed.entries[0].description)
+            try:
+                post(api, feed.entries[0].title, link, name)
+            except:
+                ppid(dnam, True)
+                quit(1)
+            else:
+                save(conf, link, name)
+        else:
+            logging.debug('  Last tweet isn\'t None.')
+            j = -1
+            for i in range(len(feed.entries)):
+                link = clnk(feed.entries[i].link, feed.entries[i].description)
+                if link == last:
+                    logging.debug('  Last link and latest tweet are the same.')
+                    break
+                else:
+                    j += 1
+            if j > -1:
+                logging.debug('  Post the latest news.')
+                logging.debug('  Newest news are: %d', j)
+                for i in range(j,-1,-1):
+                    logging.debug('  (From oldest to newest) News numer #%d', i)
+                    link = clnk(feed.entries[i].link, feed.entries[i].description)
+                    try:
+                        post(api, feed.entries[i].title, link, name)
+                    except:
+                        ppid(dnam, True)
+                        quit(1)
+                    else:
+                        save(conf, link, name)
+        ppid(dnam, True)
+    # If the application running?
+    if name and not flow:
+        logging.debug('  Wait for next time. Quit.')
 
 if __name__ == '__main__':
     try:
