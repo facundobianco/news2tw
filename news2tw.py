@@ -187,15 +187,16 @@ def post(api, title, link, name):
     post it
     """
     if len(title) > 257:
-        tweet = re.sub(' [^ ]*$', '...', title[0:250]), link
+        tweet = re.sub(' [^ ]*$', '...', title[0:250]) + ' ' + link
         logging.debug('  Trimmed tweet.')
     else:
         tweet = title + ' ' + link
     try:
         logging.debug('  Tweet will be: %s', tweet)
         api.update_status(status=tweet)
-    except:
-        print('Cannot post tweet %s. Quit.', link)
+    except tweepy.TweepError as e:
+        logging.debug('  Cannot post tweet %s.' % link)
+        logging.debug('  ERR %d: %s. Quit.', e.args[0][0]['code'], e.args[0][0]['message'])
         raise
     else:
         pass
