@@ -197,7 +197,11 @@ def post(api, title, link, name):
     except tweepy.TweepError as e:
         logging.debug('  Cannot post tweet %s.' % link)
         logging.debug('  ERR %d: %s. Quit.', e.args[0][0]['code'], e.args[0][0]['message'])
-        raise
+        if e.args[0][0]['code'] != 187:
+            raise
+        else:
+            logging.debug('  Continue.')
+            continue
     else:
         pass
 
