@@ -279,6 +279,7 @@ def main():
                 link = clnk(feed.entries[i].link, feed.entries[i].description)
                 print('Title: %s' % feed.entries[i].title)
                 print('URL: %s' % link)
+                print('Date: %s' % feed.entries[i].pubDate)
                 print('')
             quit(0)
         else:
