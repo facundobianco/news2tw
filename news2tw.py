@@ -224,6 +224,7 @@ def main():
     argument.add_argument('-d', '--dest-dir', dest = 'ddir', default = '~/.news2tw', help = 'Data directory (default: ${HOME}/.news2tw)')
     argument.add_argument('-a', '--add',      dest = 'init', action = 'store_true',  help = 'Add a new feed item')
     argument.add_argument('-l', '--list',     dest = 'list', action = 'store_true',  help = 'List feeds')
+    argument.add_argument('-p', '--print',    dest = 'prnt', action = 'store_true',  help = 'Print feed\'s last 10 items')
     argument.add_argument('-c', '-clean',     dest = 'clan', action = 'store_true',  help = 'Clean last tweet for feed')
     argument.add_argument('--clean-all',      dest = 'call', action = 'store_true',  help = 'Clean last tweet for all feeds')
     argument.add_argument('-v', '--verbose',  dest = 'verb', action = 'store_true',  help = 'Verbose (debug) logging')
@@ -265,6 +266,23 @@ def main():
         print('Configuration file is empty. Quit.')
         quit(1)
     # 
+    # Print feed's last 10 items
+    if args.prnt and size > 0:
+        if name:
+            data = rdat(conf, name)
+            feed = down(data['url'])
+            for i in range(0,10,1):
+                link = clnk(feed.entries[i].link, feed.entries[i].description)
+                print('Title: %s' % feed.entries[i].title)
+                print('URL: %s' % link)
+                print('')
+            quit(0)
+        else:
+            print('Not feed name provided. Quit.')
+            quit(1)
+    if args.list and size == 0:
+        print('Configuration file is empty. Quit.')
+        quit(1)
     # No option provided and
     # configuration files > 0
     if not name and not args.clan and not args.call:
