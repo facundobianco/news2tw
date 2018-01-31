@@ -277,9 +277,10 @@ def main():
             feed = down(data['url'])
             for i in range(0,10,1):
                 link = clnk(feed.entries[i].link, feed.entries[i].description)
+                updated = feed.entries[i].updated
                 print('Title: %s' % feed.entries[i].title)
                 print('URL: %s' % link)
-                print('Date: %s' % feed.entries[i].pubDate)
+                print('UTC: %s %s' % (updated[0:10], updated[11:16]))
                 print('')
             quit(0)
         else:
