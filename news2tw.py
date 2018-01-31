@@ -200,6 +200,7 @@ def post(api, title, link, name):
         if e.args[0][0]['code'] != 187:
             raise
         else:
+            logging.debug('  Continue.')
             pass
     else:
         pass
