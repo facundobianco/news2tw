@@ -241,7 +241,7 @@ def mail(conf, name, text):
     Subject: %s
 
     %s
-    """ % (data['from'], ", ".join(data['to']), 'news2tw status', text)
+    """ % (data['from'], data['to'], 'news2tw status', text)
     send = os.popen('%s -t -i' % data['sendmail'], 'w')
     send.write(mesg)
     logging.debug('  Email sent.')
