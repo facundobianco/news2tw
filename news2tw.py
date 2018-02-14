@@ -11,6 +11,18 @@ import re
 import tweepy
 import yaml
 
+class Error(Exception):
+    """
+    Base class for exceptions in this module
+    """
+    pass
+
+class EmailNotification(Error):
+    """
+    Enable email notifications 
+    """
+    pass
+
 def rdir(ddir):
     """
     Create configuration directory and/or
@@ -197,7 +209,9 @@ def post(api, title, link, name):
     except tweepy.TweepError as e:
         logging.debug('  Cannot post tweet %s.' % link)
         logging.debug('  ERR %d: %s. Quit.', e.args[0][0]['code'], e.args[0][0]['message'])
-        if e.args[0][0]['code'] != 187:
+        if e.args[0][0]['code'] == 326:
+            raise EmailNotification
+        elif e.args[0][0]['code'] != 187:
             raise
         else:
             logging.debug('  Continue.')
@@ -215,6 +229,28 @@ def save(conf, link, name):
     with open(conf, 'w') as stream:
         yaml.safe_dump(data, stream, default_flow_style=False)
     logging.debug('  Updated last tweet in YAML.')
+
+def mail(conf, name, text):
+    """
+    Notify by email
+    """
+    data = rdat(conf, 'config')
+    mesg = """\
+    From: %s
+    To: %s
+    Subject: %s
+
+    %s
+    """ % (data['from'], ", ".join(data['to']), 'news2tw status', text)
+    send = os.popen('%s -t -i' % data['sendmail'], 'w')
+    send.write(mesg)
+    logging.debug('  Email sent.')
+    with open(conf, 'r') as stream:
+        data = yaml.safe_load(stream)
+    data[name]['err326'] = True
+    with open(conf, 'w') as stream:
+        yaml.safe_dump(data, stream, default_flow_style=False)
+    logging.debug('  Updated status in YAML.')
 
 def main():
     """
@@ -337,6 +373,11 @@ def main():
             link = clnk(feed.entries[0].link, feed.entries[0].description)
             try:
                 post(api, feed.entries[0].title, link, name)
+            except EmailNotification:
+                if data['err326'] == False:
+                    mail(conf, name, 'ERR 326: This account is temporarily locked.')
+                ppid(dnam, True)
+                quit(1)
             except:
                 ppid(dnam, True)
                 quit(1)
@@ -360,6 +401,11 @@ def main():
                     link = clnk(feed.entries[i].link, feed.entries[i].description)
                     try:
                         post(api, feed.entries[i].title, link, name)
+                    except EmailNotification:
+                        if data['err326'] == False:
+                            email(conf, name, 'ERR 326: This account is temporarily locked.')
+                        ppid(dnam, True)
+                        quit(1)
                     except:
                         ppid(dnam, True)
                         quit(1)

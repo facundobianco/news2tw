@@ -1,4 +1,4 @@
-# news2tw v0.9.1
+# news2tw v0.9.2
 
 ### Description
 
@@ -65,6 +65,15 @@ news2tw -l
 ```
 news2tw --clean <your_feed_alias>
 ```
+
+### Error codes
+
+news2tw deals with the error codes from Twitter's API. For all error codes, news2tw stops the processing except:
+
+* **ERR 187:** "Status is duplicated", news2tw will ingore it and continue saving it as last feed
+* **ERR 326:** "Account is temporarily locked", news2tw will send an email to notify you
+
+Error codes are detailed in [Twitter's Docs](https://developer.twitter.com/en/docs/basics/response-codes). 
 
 ### Twitter accounts powered by news2tw 
 
