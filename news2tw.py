@@ -403,7 +403,7 @@ def main():
                         post(api, feed.entries[i].title, link, name)
                     except EmailNotification:
                         if data['err326'] == False:
-                            email(conf, name, 'ERR 326: This account is temporarily locked.')
+                            mail(conf, name, 'ERR 326: This account is temporarily locked.')
                         ppid(dnam, True)
                         quit(1)
                     except:
