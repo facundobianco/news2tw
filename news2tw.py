@@ -230,7 +230,7 @@ def save(conf, link, name):
         yaml.safe_dump(data, stream, default_flow_style=False)
     logging.debug('  Updated last tweet in YAML.')
 
-def mail(conf, name, text):
+def mail(text):
     """
     Notify by email
     """
@@ -245,9 +245,11 @@ def mail(conf, name, text):
     send = os.popen('%s -t -i' % data['sendmail'], 'w')
     send.write(mesg)
     logging.debug('  Email sent.')
+
+def e326(conf, name, status):
     with open(conf, 'r') as stream:
         data = yaml.safe_load(stream)
-    data[name]['err326'] = True
+    data[name]['err326'] = status
     with open(conf, 'w') as stream:
         yaml.safe_dump(data, stream, default_flow_style=False)
     logging.debug('  Updated status in YAML.')
@@ -375,13 +377,16 @@ def main():
                 post(api, feed.entries[0].title, link, name)
             except EmailNotification:
                 if data['err326'] == False:
-                    mail(conf, name, 'ERR 326: This account is temporarily locked.')
+                    mail('ERR 326: This account is temporarily locked.')
+                    e326(conf, name, True)
                 ppid(dnam, True)
                 quit(1)
             except:
                 ppid(dnam, True)
                 quit(1)
             else:
+                if data['err326'] == True:
+                    e326(conf, name, False)
                 save(conf, link, name)
         else:
             logging.debug('  Last tweet isn\'t None.')
@@ -403,13 +408,16 @@ def main():
                         post(api, feed.entries[i].title, link, name)
                     except EmailNotification:
                         if data['err326'] == False:
-                            mail(conf, name, 'ERR 326: This account is temporarily locked.')
+                            mail('ERR 326: This account is temporarily locked.')
+                            e326(conf, name, True)
                         ppid(dnam, True)
                         quit(1)
                     except:
                         ppid(dnam, True)
                         quit(1)
                     else:
+                        if data['err326'] == True:
+                            e326(conf, name, False)
                         save(conf, link, name)
         ppid(dnam, True)
     # If the application running?
