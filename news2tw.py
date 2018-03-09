@@ -230,7 +230,7 @@ def save(conf, link, name):
         yaml.safe_dump(data, stream, default_flow_style=False)
     logging.debug('  Updated last tweet in YAML.')
 
-def mail(text):
+def mail(conf, text):
     """
     Notify by email
     """
@@ -377,7 +377,7 @@ def main():
                 post(api, feed.entries[0].title, link, name)
             except EmailNotification:
                 if data['err326'] == False:
-                    mail('ERR 326: This account is temporarily locked.')
+                    mail(conf, 'ERR 326: This account is temporarily locked.')
                     e326(conf, name, True)
                 ppid(dnam, True)
                 quit(1)
@@ -408,7 +408,7 @@ def main():
                         post(api, feed.entries[i].title, link, name)
                     except EmailNotification:
                         if data['err326'] == False:
-                            mail('ERR 326: This account is temporarily locked.')
+                            mail(conf, 'ERR 326: This account is temporarily locked.')
                             e326(conf, name, True)
                         ppid(dnam, True)
                         quit(1)
