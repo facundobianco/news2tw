@@ -19,7 +19,7 @@ class Error(Exception):
 
 class EmailNotification(Error):
     """
-    Enable email notifications 
+    Enable email notifications
     """
     pass
 
@@ -106,7 +106,7 @@ def newf(conf, name, keys):
     Save new feed configuration and its keys
     keys = screen_name, feed's url, consumer_key, consumer_secret, token_key, token_secret
     """
-    data = {name:{'user':keys[0], 'url':keys[1], 'consumer_key':keys[2], 'consumer_secret':keys[3], 'token_key':keys[4], 'token_secret':keys[5], 'last':None, 'etag':None}}
+    data = {name:{'user':keys[0], 'url':keys[1], 'consumer_key':keys[2], 'consumer_secret':keys[3], 'token_key':keys[4], 'token_secret':keys[5], 'last':None, 'etag':None, 'err326':None}}
     with open(conf, 'a') as stream:
         yaml.safe_dump(data, stream, default_flow_style=False)
     logging.debug('  Saved data for', name)
@@ -307,7 +307,7 @@ def main():
     if args.list and size == 0:
         print('Configuration file is empty. Quit.')
         quit(1)
-    # 
+    #
     # Print feed's last 10 items
     if args.prnt and size > 0:
         if name:
@@ -337,7 +337,7 @@ def main():
     # PID control
     # (Required for the next functions)
     flow = ppid(dnam, False)
-    # 
+    #
     # Clean one feed
     # or all feeds
     if args.clan or args.call:
@@ -357,7 +357,7 @@ def main():
             print('Configuration file is empty. Quit.')
             ppid(dnam, True)
             quit(1)
-    # 
+    #
     # Get new entries and tweet it
     if name and flow:
         data = rdat(conf, name)
