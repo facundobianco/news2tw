@@ -1,4 +1,4 @@
-# news2tw v0.9.2
+# news2tw v0.9.3
 
 ### Description
 
@@ -64,6 +64,20 @@ news2tw -l
 
 ```
 news2tw --clean <your_feed_alias>
+```
+
+#### Useful crontab syntax
+
+Run cron on even minute
+
+```
+*/2 * * * * /usr/bin/python2.7 ${HOME}/news2tw/news2tw.py <your_feed_alias>
+```
+
+Run cron on odd minute
+
+```
+1-59/2 * * * * /usr/bin/python2.7 ${HOME}/news2tw/news2tw.py <your_feed_alias>
 ```
 
 ### Error codes
